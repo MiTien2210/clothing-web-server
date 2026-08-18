@@ -1,0 +1,3 @@
+export const MAX_WRONG_OTP_ATTEMPTS = 5;
+export const OTP_EXPIRATION_SECONDS = 300;
+export const RESEND_OTP_COOLDOWN_SECONDS = 60;
