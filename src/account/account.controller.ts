@@ -3,6 +3,7 @@ import { AccountService } from './account.service';
 import { RegisterDto } from './dto/register.dto';
 import { VerifyOtpDto } from './dto/verify-otp.dto';
 import { ResendOtpDto } from './dto/resend-otp.dto';
+import { LoginDto } from './dto/login.dto';
 
 @Controller('account')
 export class AccountController {
@@ -20,5 +21,10 @@ export class AccountController {
   @Post('resend-otp')
   async resendOtp(@Body() dto: ResendOtpDto) {
     return this.accountService.resendOtp(dto);
+  }
+
+  @Post('login')
+  async login(@Body() dto: LoginDto) {
+    return this.accountService.login(dto);
   }
 }

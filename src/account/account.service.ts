@@ -3,12 +3,13 @@ import {
   Inject,
   Injectable,
   NotFoundException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { User } from 'src/users/user.entity';
 import { Repository } from 'typeorm';
 import { RegisterDto } from './dto/register.dto';
-import { hashPasswordHelper } from 'src/helpers/util';
+import { comparePasswordHelper, hashPasswordHelper } from 'src/helpers/util';
 import { REDIS_CLIENT } from 'src/redis/redis.constants';
 import Redis from 'ioredis';
 import { VerifyOtpDto } from './dto/verify-otp.dto';
@@ -18,6 +19,9 @@ import {
   RESEND_OTP_COOLDOWN_SECONDS,
 } from './account.constants';
 import { ResendOtpDto } from './dto/resend-otp.dto';
+import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
+import { LoginDto } from './dto/login.dto';
 
 @Injectable()
 export class AccountService {
@@ -25,6 +29,8 @@ export class AccountService {
     @InjectRepository(User)
     private usersRepository: Repository<User>,
     @Inject(REDIS_CLIENT) private readonly redis: Redis,
+    private readonly jwtService: JwtService,
+    private readonly configService: ConfigService,
   ) {}
 
   async register(registerDto: RegisterDto) {
@@ -166,5 +172,57 @@ export class AccountService {
     console.log(`[DEV] OTP mới cho ${resendOtpDto.email}: ${otp}`);
 
     return { message: 'A new OTP has been sent' };
+  }
+
+  async login(loginDto: LoginDto) {
+    const user = await this.usersRepository.findOne({
+      where: { email: loginDto.email },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException('Invalid email or password');
+    }
+
+    if (!user.is_active) {
+      throw new UnauthorizedException('Your account was blocked');
+    }
+
+    if (!user.is_verified) {
+      throw new UnauthorizedException('Account email not verified');
+    }
+
+    const isPasswordValid = await comparePasswordHelper(
+      loginDto.password,
+      user.password_hash,
+    );
+
+    if (!isPasswordValid) {
+      throw new UnauthorizedException('Invalid email or password');
+    }
+
+    const payload = { sub: user.id, email: user.email, role: user.role };
+
+    const accessToken = await this.jwtService.signAsync(payload, {
+      secret: this.configService.get<string>('JWT_ACCESS_SECRET'),
+      expiresIn: Number(
+        this.configService.get<string>('JWT_ACCESS_EXPIRES_IN'),
+      ),
+    });
+
+    const refreshToken = await this.jwtService.signAsync(payload, {
+      secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
+      expiresIn: Number(
+        this.configService.get<string>('JWT_REFRESH_EXPIRES_IN'),
+      ),
+    });
+
+    await this.redis.set(
+      `refresh:${user.id}`,
+      refreshToken,
+      'EX',
+      Number(this.configService.get<string>('JWT_REFRESH_EXPIRES_IN')),
+    );
+
+    return { accessToken, refreshToken };
   }
 }
