@@ -22,6 +22,9 @@ import { ResendOtpDto } from './dto/resend-otp.dto';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { LoginDto } from './dto/login.dto';
+import { RefreshTokenDto } from './dto/refresh-token.dto';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
 
 @Injectable()
 export class AccountService {
@@ -224,5 +227,136 @@ export class AccountService {
     );
 
     return { accessToken, refreshToken };
+  }
+
+  async refreshToken(refreshTokenDto: RefreshTokenDto) {
+    let payload: { sub: string; email: string; role: string };
+
+    try {
+      payload = await this.jwtService.verifyAsync(
+        refreshTokenDto.refreshToken,
+        {
+          secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
+        },
+      );
+    } catch {
+      throw new UnauthorizedException('Invalid or expired refresh token');
+    }
+
+    const storedToken = await this.redis.get(`refresh:${payload.sub}`);
+
+    if (storedToken !== refreshTokenDto.refreshToken) {
+      throw new UnauthorizedException('Refresh token has been revoked');
+    }
+
+    const user = await this.usersRepository.findOne({
+      where: { id: payload.sub },
+    });
+
+    if (!user || !user.is_active) {
+      throw new UnauthorizedException('Account is not active');
+    }
+
+    const newPayload = { sub: user.id, email: user.email, role: user.role };
+
+    const accessToken = await this.jwtService.signAsync(newPayload, {
+      secret: this.configService.get<string>('JWT_ACCESS_SECRET'),
+      expiresIn: Number(
+        this.configService.get<string>('JWT_ACCESS_EXPIRES_IN'),
+      ),
+    });
+
+    return { accessToken };
+  }
+
+  async logout(refreshTokenDto: RefreshTokenDto) {
+    try {
+      const payload = await this.jwtService.verifyAsync<{ sub: string }>(
+        refreshTokenDto.refreshToken,
+        {
+          secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
+        },
+      );
+      await this.redis.del(`refresh:${payload.sub}`);
+    } catch {
+      // Token đã hỏng/hết hạn — vẫn coi như logout thành công
+    }
+
+    return { message: 'Logged out successfully' };
+  }
+
+  async forgotPassword(forgotPasswordDto: ForgotPasswordDto) {
+    const user = await this.usersRepository.findOne({
+      where: { email: forgotPasswordDto.email },
+    });
+    if (!user) {
+      throw new NotFoundException('Account not found');
+    }
+
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+    await this.redis.set(
+      `reset-password:${forgotPasswordDto.email}`,
+      otp,
+      'EX',
+      OTP_EXPIRATION_SECONDS,
+    );
+
+    console.log(
+      `[DEV] Reset password OTP cho ${forgotPasswordDto.email}: ${otp}`,
+    );
+
+    return { message: 'A password reset code has been sent to your email' };
+  }
+
+  async resetPassword(resetPasswordDto: ResetPasswordDto) {
+    const key = `reset-password:${resetPasswordDto.email}`;
+    const attemptsKey = `reset-password:attempts:${resetPasswordDto.email}`;
+
+    const storedOtp = await this.redis.get(key);
+
+    if (!storedOtp) {
+      throw new BadRequestException('The OTP has expired or does not exist.');
+    }
+
+    const currentAttempts = Number((await this.redis.get(attemptsKey)) ?? 0);
+    if (currentAttempts >= MAX_WRONG_OTP_ATTEMPTS) {
+      await this.redis.del(key);
+      await this.redis.del(attemptsKey);
+      throw new BadRequestException(
+        'You have entered the wrong code too many times. Please request a new code.',
+      );
+    }
+
+    if (storedOtp !== resetPasswordDto.otp) {
+      const attempts = await this.redis.incr(attemptsKey);
+      if (attempts === 1) {
+        await this.redis.expire(attemptsKey, OTP_EXPIRATION_SECONDS);
+      }
+      throw new BadRequestException(
+        `The OTP is incorrect. You have ${MAX_WRONG_OTP_ATTEMPTS - attempts} attempt(s) left.`,
+      );
+    }
+
+    const user = await this.usersRepository.findOne({
+      where: { email: resetPasswordDto.email },
+    });
+
+    if (!user) {
+      throw new NotFoundException('Account not found');
+    }
+
+    const newPasswordHash = await hashPasswordHelper(
+      resetPasswordDto.newPassword,
+    );
+
+    await this.usersRepository.update(user.id, {
+      password_hash: newPasswordHash,
+    });
+
+    await this.redis.del(key);
+    await this.redis.del(attemptsKey);
+
+    return { message: 'Password has been reset successfully' };
   }
 }
