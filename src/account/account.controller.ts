@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Post, Patch, UseGuards } from '@nestjs/common';
 import { AccountService } from './account.service';
 import { RegisterDto } from './dto/register.dto';
 import { VerifyOtpDto } from './dto/verify-otp.dto';
@@ -9,6 +9,7 @@ import { CurrentUser } from 'src/decorators/current-user.decorator';
 import { AuthGuard } from 'src/common/guards/auth.guard';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { UpdateProfileDto } from './dto/update-profile.dto';
 
 @Controller('account')
 export class AccountController {
@@ -43,14 +44,6 @@ export class AccountController {
     return this.accountService.logout(dto);
   }
 
-  @Get('me')
-  @UseGuards(AuthGuard)
-  getProfile(
-    @CurrentUser() user: { sub: string; email: string; role: string },
-  ) {
-    return user;
-  }
-
   @Post('forgot-password')
   async forgotPassword(@Body() dto: ForgotPasswordDto) {
     return this.accountService.forgotPassword(dto);
@@ -59,5 +52,22 @@ export class AccountController {
   @Post('reset-password')
   async resetPassword(@Body() dto: ResetPasswordDto) {
     return this.accountService.resetPassword(dto);
+  }
+
+  @Get('me')
+  @UseGuards(AuthGuard)
+  getProfile(
+    @CurrentUser() user: { sub: string; email: string; role: string },
+  ) {
+    return this.accountService.getMe(user.sub);
+  }
+
+  @Patch('me')
+  @UseGuards(AuthGuard)
+  updateProfile(
+    @CurrentUser() user: { sub: string; email: string; role: string },
+    @Body() dto: UpdateProfileDto,
+  ) {
+    return this.accountService.updateProfile(user.sub, dto);
   }
 }

@@ -25,6 +25,7 @@ import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import { UpdateProfileDto } from './dto/update-profile.dto';
 
 @Injectable()
 export class AccountService {
@@ -358,5 +359,26 @@ export class AccountService {
     await this.redis.del(attemptsKey);
 
     return { message: 'Password has been reset successfully' };
+  }
+
+  async getMe(userId: string) {
+    const user = await this.usersRepository.findOne({
+      where: { id: userId },
+    });
+    if (!user) {
+      throw new NotFoundException('Account not found');
+    }
+    const { password_hash, ...result } = user;
+    return result;
+  }
+
+  async updateProfile(userId: string, updateProfileDto: UpdateProfileDto) {
+    const user = await this.usersRepository.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundException('Account not found');
+    }
+
+    await this.usersRepository.update(userId, updateProfileDto);
+    return this.getMe(userId);
   }
 }
