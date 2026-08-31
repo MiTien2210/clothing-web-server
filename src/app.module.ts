@@ -9,6 +9,7 @@ import { AccountModule } from './account/account.module';
 import { CategoriesModule } from './categories/categories.module';
 import { JwtModule } from '@nestjs/jwt';
 import { ProductsModule } from './products/products.module';
+import { ProductVariantsModule } from './product-variants/product-variants.module';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { ProductsModule } from './products/products.module';
     AccountModule,
     CategoriesModule,
     ProductsModule,
+    ProductVariantsModule,
   ],
   controllers: [AppController, HealthController],
   providers: [AppService],
