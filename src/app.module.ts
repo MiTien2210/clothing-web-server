@@ -8,6 +8,7 @@ import { HealthController } from './health/health.controller';
 import { AccountModule } from './account/account.module';
 import { CategoriesModule } from './categories/categories.module';
 import { JwtModule } from '@nestjs/jwt';
+import { ProductsModule } from './products/products.module';
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { JwtModule } from '@nestjs/jwt';
     RedisModule,
     AccountModule,
     CategoriesModule,
+    ProductsModule,
   ],
   controllers: [AppController, HealthController],
   providers: [AppService],
