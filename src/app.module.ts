@@ -6,6 +6,8 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { RedisModule } from './redis/redis.module';
 import { HealthController } from './health/health.controller';
 import { AccountModule } from './account/account.module';
+import { CategoriesModule } from './categories/categories.module';
+import { JwtModule } from '@nestjs/jwt';
 
 @Module({
   imports: [
@@ -25,8 +27,10 @@ import { AccountModule } from './account/account.module';
         synchronize: true,
       }),
     }),
+    JwtModule.register({ global: true }),
     RedisModule,
     AccountModule,
+    CategoriesModule,
   ],
   controllers: [AppController, HealthController],
   providers: [AppService],
