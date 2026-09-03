@@ -28,7 +28,7 @@ export class ProductVariant {
   @Column({ unique: true })
   sku: string;
 
-  @ManyToOne(() => Product)
+  @ManyToOne(() => Product, { onDelete: 'CASCADE' })
   product: Product;
 
   @CreateDateColumn()

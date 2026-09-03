@@ -25,7 +25,7 @@ export class Product {
   @Column({ type: 'text', nullable: true })
   care_instructions: string | null;
 
-  @ManyToOne(() => Category)
+  @ManyToOne(() => Category, { onDelete: 'CASCADE' })
   category: Category;
 
   @CreateDateColumn()
