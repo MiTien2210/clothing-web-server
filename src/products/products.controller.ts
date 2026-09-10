@@ -6,6 +6,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { ProductsService } from './products.service';
@@ -14,19 +15,30 @@ import { CreateProductDto } from './dto/create-product.dto';
 import { Roles } from 'src/decorators/roles.decorator';
 import { RolesGuard } from 'src/common/guards/roles.guard';
 import { UpdateProductDto } from './dto/update-product.dto';
+import { GetProductsQueryDto } from './dto/get-products-query.dto';
 
 @Controller('products')
 export class ProductsController {
   constructor(private readonly productsService: ProductsService) {}
 
+  @Get('filters')
+  findFilters() {
+    return this.productsService.findAvailableFilters();
+  }
+
   @Get()
-  findAll() {
-    return this.productsService.findAllProduct();
+  findAll(@Query() query: GetProductsQueryDto) {
+    return this.productsService.findAllProduct(query);
   }
 
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.productsService.findOneProduct(id);
+  }
+
+  @Get(':id/related')
+  findRelated(@Param('id') id: string) {
+    return this.productsService.findRelatedProducts(id);
   }
 
   @Post()
