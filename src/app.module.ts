@@ -10,6 +10,7 @@ import { CategoriesModule } from './categories/categories.module';
 import { JwtModule } from '@nestjs/jwt';
 import { ProductsModule } from './products/products.module';
 import { ProductVariantsModule } from './product-variants/product-variants.module';
+import { CartModule } from './cart/cart.module';
 
 @Module({
   imports: [
@@ -35,6 +36,7 @@ import { ProductVariantsModule } from './product-variants/product-variants.modul
     CategoriesModule,
     ProductsModule,
     ProductVariantsModule,
+    CartModule,
   ],
   controllers: [AppController, HealthController],
   providers: [AppService],
