@@ -11,6 +11,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { ProductsModule } from './products/products.module';
 import { ProductVariantsModule } from './product-variants/product-variants.module';
 import { CartModule } from './cart/cart.module';
+import { AddressesModule } from './addresses/addresses.module';
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { CartModule } from './cart/cart.module';
     ProductsModule,
     ProductVariantsModule,
     CartModule,
+    AddressesModule,
   ],
   controllers: [AppController, HealthController],
   providers: [AppService],
