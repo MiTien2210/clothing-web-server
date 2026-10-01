@@ -12,6 +12,7 @@ import { ProductsModule } from './products/products.module';
 import { ProductVariantsModule } from './product-variants/product-variants.module';
 import { CartModule } from './cart/cart.module';
 import { AddressesModule } from './addresses/addresses.module';
+import { OrdersModule } from './orders/orders.module';
 
 @Module({
   imports: [
@@ -39,6 +40,7 @@ import { AddressesModule } from './addresses/addresses.module';
     ProductVariantsModule,
     CartModule,
     AddressesModule,
+    OrdersModule,
   ],
   controllers: [AppController, HealthController],
   providers: [AppService],
